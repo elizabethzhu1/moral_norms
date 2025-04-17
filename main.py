@@ -2,9 +2,10 @@ import re
 from datasets import load_dataset
 import random
 
-def check_answer(answer, correct_answer):
-    # FIX THIS TO DO AN ACTUAL COMPARISON WITH LLM
-    return True
+def check_answer(label, correct_label):
+    if label == correct_label:
+        return True
+    return False
 
 
 def extract_text(text, tag):
@@ -44,7 +45,6 @@ def make_conversation(example):
     example = {k: v for k, v in example.items() if k in ['situation', 'moral_action', 'immoral_action']}
 
     moral_label = random.choice(['A', 'B'])
-    immoral_label = 'B' if moral_label == 'A' else 'A'
     
     if moral_label == 'A':
         options = [example["moral_action"], example["immoral_action"]]
@@ -64,12 +64,8 @@ def make_conversation(example):
 
 
 SYSTEM_PROMPT = (
-    "A conversation between User and Assistant. The user asks a question, and the Assistant solves it. The assistant "
-    "first thinks about the reasoning process in the mind and then provides the user with the answer. The reasoning "
-    "process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., "
-    "<think> reasoning process here </think><answer> answer here </answer>"
+    "A conversation between User and Assistant. The user asks a question, and the Assistant solves it. As the assistant, you will be given hypothetical scenarios in which a subject finds themselves in. You are to reason step-by-step about what the morally appropriate action is for the subject given this scenario. Enclose your step by step reasoning process between a starting <think> tag and a </think> tag marking the end, i.e., <think> reasoning process here </think>. Then, identify a relevant norm that informs the appropriate action for the subject to take and specify this norm between the tags <norm> and </norm>. Finally, specify the correct answer by enclosing it between the tags <answer> and </answer>. The answer should be one of the options A or B."
 )
-
 
 # generate MC questions from dataset
 prompts = []
