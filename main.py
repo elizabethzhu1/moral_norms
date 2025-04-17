@@ -8,62 +8,72 @@ def check_answer(answer, correct_answer):
 
 
 def extract_text(text, tag):
-    pattern = fr'<{tag}>(.*?)</{tag}>'
-    return re.findall(pattern, text, re.DOTALL)
+    if f'<{tag}>' not in text:
+        return None
 
-# parse <think>, <norm>, <answer>
-def reward_fn(result, correct_answer, correct_norm):
-    result = [0, 0]  # [norm, answer]
-    reasoning = extract_text('think')
-    norm = extract_text('norm')
-    answer = extract_text('answer')
+    pattern = fr'<{tag}>(.*?)</{tag}>'
+    matches = re.findall(pattern, text, re.DOTALL)
+
+    # if xml tag is not found, return None
+    if not matches:
+        return None
+
+    try:
+        final_match = matches[-1].strip()
+        return final_match
+    except:
+        return None
+
+
+# check if answer is correct --> if so, return 1, else return 0
+def reward_fn(result, correct_answer):
+    reasoning = extract_text(result, 'think')
+    answer = extract_text(result, 'answer')
 
     print("REASONING:", reasoning)
-    print("NORM:", norm)
     print("ANSWER:", answer)
 
-    print("CORRECT NORM:", correct_norm)
-    print("CORRECT ANSWER:", correct_answer)
-
-    if check_answer(norm, correct_norm):
-        result[0] = 1
-    else:
-        result[0] = 0
-
-    # check if answer is correct via LLM comparison
     if check_answer(answer, correct_answer):
-        result[1] = 1
+        return 1
     else:
-        result[1] = 0
-
-    return result
+        return 0
 
 
+def make_conversation(example):
+    # Remove unnecessary columns
+    example = {k: v for k, v in example.items() if k in ['situation', 'moral_action', 'immoral_action']}
+
+    moral_label = random.choice(['A', 'B'])
+    immoral_label = 'B' if moral_label == 'A' else 'A'
+
+    return {
+        f"prompt": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": f"""Scenario: {example["situation"]}
+            Between the following two actions A and B, which one should be chosen?
+            {moral_label}. Moral Action: {example["moral_action"]}
+            {immoral_label}. Immoral Action: {example["immoral_action"]}
+            """},
+        ],
+    }
+
+
+SYSTEM_PROMPT = (
+    "A conversation between User and Assistant. The user asks a question, and the Assistant solves it. The assistant "
+    "first thinks about the reasoning process in the mind and then provides the user with the answer. The reasoning "
+    "process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., "
+    "<think> reasoning process here </think><answer> answer here </answer>"
+)
+
+
+# generate MC questions from dataset
 prompts = []
 def main():
-    ds = load_dataset("demelin/moral_stories", "full")
+    ds_train = load_dataset("demelin/moral_stories", "full", split='train')
 
-    print(ds['train'][0])
+    train_dataset = ds_train.map(make_conversation).select_columns(['prompt', 'ID'])
 
-    # format as multiple choice questions between moral + immoral actions
-    for i in range(len(ds['train'])):
-        story = ds['train'][i]['story']
-        moral_action = ds['train'][i]['moral_action']
-        immoral_action = ds['train'][i]['immoral_action']
-
-        moral_label = random.choice(['A', 'B'])
-        immoral_label = 'B' if moral_label == 'A' else 'A'
-
-        prompt = f"""
-            Scenario: {story}
-            Between the following two actions A and B, which one should be chosen?
-            {moral_label}. Moral Action: {moral_action}
-            {immoral_label}. Immoral Action: {immoral_action}
-            """
-        
-        prompts.append(prompt)
-    
-    print("PROMPTS:", prompts)
+    print(train_dataset[0])
 
 
 if __name__ == '__main__':
