@@ -59,7 +59,7 @@ def make_conversation(example):
             A. {options[0]}
             B. {options[1]}"""},
         ],
-        "moral_label": moral_label
+        "ground_truth": moral_label
     }
 
 
