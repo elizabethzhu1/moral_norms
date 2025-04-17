@@ -45,16 +45,21 @@ def make_conversation(example):
 
     moral_label = random.choice(['A', 'B'])
     immoral_label = 'B' if moral_label == 'A' else 'A'
+    
+    if moral_label == 'A':
+        options = [example["moral_action"], example["immoral_action"]]
+    else:
+        options = [example["immoral_action"], example["moral_action"]]
 
     return {
         f"prompt": [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": f"""Scenario: {example["situation"]}
             Between the following two actions A and B, which one should be chosen?
-            {moral_label}. Moral Action: {example["moral_action"]}
-            {immoral_label}. Immoral Action: {example["immoral_action"]}
-            """},
+            A. {options[0]}
+            B. {options[1]}"""},
         ],
+        "moral_label": moral_label
     }
 
 
