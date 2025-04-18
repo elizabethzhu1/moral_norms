@@ -36,9 +36,8 @@ def reward_fn(result, correct_answer):
     print("REASONING:", reasoning)
     print("ANSWER:", answer)
 
-
     if check_answer(answer, correct_answer):
-        reward += 1
+        reward += 2  # fix depending on how much to weigh correctness vs formatting
     
     return reward
 
@@ -86,15 +85,13 @@ SYSTEM_PROMPT = (
     "A conversation between User and Assistant. The user asks a question, and the Assistant solves it. As the assistant, you will be given hypothetical scenarios in which a subject finds themselves in. You are to reason step-by-step about what the morally appropriate action is for the subject given this scenario. Enclose your step by step reasoning process between a starting <think> tag and a </think> tag marking the end, i.e., <think> reasoning process here </think>. Then, identify a relevant norm that informs the appropriate action for the subject to take and specify this norm between the tags <norm> and </norm>. Finally, specify the correct answer by enclosing it between the tags <answer> and </answer>. The answer should be one of the options A or B."
 )
 
-# generate MC questions from dataset
-prompts = []
-def main():
+def get_training_dataset(ds_train):
+
+    train_dataset = ds_train.map(make_conversation).select_columns(['prompt', 'ID', 'label'])
+
+    return train_dataset
+
+if __name__ == "__main__":
     ds_train = load_dataset("demelin/moral_stories", "full", split='train')
-
-    train_dataset = ds_train.map(make_conversation).select_columns(['prompt', 'ID'])
-
+    train_dataset = get_training_dataset(ds_train)
     print(train_dataset[0])
-
-
-if __name__ == '__main__':
-    main()
