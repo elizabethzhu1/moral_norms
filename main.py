@@ -28,16 +28,35 @@ def extract_text(text, tag):
 
 # check if answer is correct --> if so, return 1, else return 0
 def reward_fn(result, correct_answer):
+    reward = 0
+
     reasoning = extract_text(result, 'think')
     answer = extract_text(result, 'answer')
 
     print("REASONING:", reasoning)
     print("ANSWER:", answer)
 
+
     if check_answer(answer, correct_answer):
-        return 1
-    else:
-        return 0
+        reward += 1
+    
+    return reward
+
+
+"""Reward function that checks if the completion has a specific format.
+This function appears redundant since we already have a more comprehensive reward_fn above 
+that not only checks format but also validates answers and provides partial rewards."""
+def format_reward(completions, **kwargs):
+    # This function is likely not needed since:
+    # 1. reward_fn already checks format via extract_text()
+    # 2. reward_fn provides more granular rewards (0.5 for each component)
+    # 3. reward_fn validates answer correctness
+    # 4. reward_fn is the one actually used in train.py
+    pattern = r"^<think>.*?</think>\s*<norm>.*?</norm>\s*<answer>.*?</answer>$"
+    completion_contents = [completion[0]["content"] for completion in completions]
+    matches = [re.match(pattern, content) for content in completion_contents]
+    rewards_list = [1.0 if match else 0.0 for match in matches]
+    return [1.0 if match else 0.0 for match in matches]
 
 
 def make_conversation(example):
