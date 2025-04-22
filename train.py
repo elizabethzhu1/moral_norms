@@ -46,7 +46,7 @@ model = AutoModelForCausalLM.from_pretrained(
 
 # model = get_peft_model(model, lora_config)
 
-model.print_trainable_parameters()
+# model.print_trainable_parameters()
 
 # Configure training arguments using GRPOConfig
 training_args = GRPOConfig(
