@@ -3,7 +3,6 @@ import json
 
 import torch
 from transformers import AutoModelForCausalLM
-from peft import LoraConfig, get_peft_model
 from datasets import load_dataset
 from trl import GRPOConfig, GRPOTrainer
 from accelerate import Accelerator
