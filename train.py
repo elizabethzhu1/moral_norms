@@ -6,7 +6,8 @@ from transformers import AutoModelForCausalLM
 from peft import LoraConfig, get_peft_model
 from datasets import load_dataset
 from trl import GRPOConfig, GRPOTrainer
-
+from accelerate import Accelerator
+import wandb
 from main import reward_fn, format_reward, make_conversation, SYSTEM_PROMPT, get_training_dataset
 
 parser = argparse.ArgumentParser()
@@ -14,6 +15,15 @@ parser.add_argument("--config", type=str, default="config.json")
 args = parser.parse_args()
 
 config = json.load(open(args.config))
+
+accelerator = Accelerator()
+if accelerator.is_main_process:
+    wandb.init(
+        project="morals",
+        entity="cocolab",
+        name=config["run_name"],
+        config=config,
+    )
 
 ds_train = load_dataset("demelin/moral_stories", "full", split='train')
 

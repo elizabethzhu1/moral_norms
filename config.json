@@ -1,4 +1,5 @@
 {
+  "run_name": "Qwen2.5-3B-v1",
   "model_id": "Qwen/Qwen2.5-3B",
   "output_dir": "/scr/kanishkg/morals/results",
   "learning_rate": 1e-5,
