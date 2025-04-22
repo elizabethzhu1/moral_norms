@@ -10,11 +10,11 @@ ds_train = load_dataset("demelin/moral_stories", "full", split='train')
 # Process dataset to create prompts and ground truth labels
 train_dataset = get_training_dataset(ds_train)
 
-model_id = "openai-community/openai-gpt"
+model_id = "Qwen/Qwen2.5-3B"
 model = AutoModelForCausalLM.from_pretrained(
     model_id,
-    torch_dtype="auto",
-    device_map="auto",
+    torch_dtype=torch.bfloat16,
+    attn_implementation="flash_attention_2",
 )
 
 lora_config = LoraConfig(
@@ -38,11 +38,11 @@ training_args = GRPOConfig(
     num_train_epochs=1,
     bf16=True,
     # Parameters that control data preprocessing
-    max_completion_length=64,  # default: 256
+    max_completion_length=1024,  # default: 256
     num_generations=4,  # default: 8
-    max_prompt_length=128,  # default: 512
+    max_prompt_length=256,  # default: 512
     # Parameters related to reporting and saving
-    report_to=["tensorboard"],
+    report_to=["wanndb"],
     logging_steps=10,
     push_to_hub=True,
     save_strategy="steps",
@@ -51,7 +51,7 @@ training_args = GRPOConfig(
 
 trainer = GRPOTrainer(
     model=model,
-    reward_funcs=[format_reward, reward_fn],
+    reward_funcs=[reward_fn],
     args=training_args,
     train_dataset=train_dataset,  # Use processed dataset
 )

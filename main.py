@@ -37,23 +37,14 @@ def reward_fn(result, example):
     print("ANSWER:", answer)
 
     if check_answer(answer, example['ground_truth']):
-        reward += 2  # fix depending on how much to weigh correctness vs formatting
-    
-    return reward
-
-
-"Reward function that checks if the completion has a specific format."
-def format_reward(output, **kwargs):
-    # This function is likely not needed since:
-    # 1. reward_fn already checks format via extract_text()
-    # 2. reward_fn provides more granular rewards (0.5 for each component)
-    # 3. reward_fn validates answer correctness
-    # 4. reward_fn is the one actually used in train.py
-    pattern = r"^<think>.*?</think>\s*<norm>.*?</norm>\s*<answer>.*?</answer>$"
-    if re.fullmatch(pattern, output.strip(), re.DOTALL):
-        return 1
+        reward = 1
     else:
-        return 0
+        if reasoning is not None and answer is not None:
+            reward += 0.1
+        else:
+            reward = 0
+
+    return reward
 
 
 def make_conversation(example):
@@ -76,7 +67,7 @@ def make_conversation(example):
             B. {options[1]}"""},
         ],
         "ground_truth": moral_label,
-        "ID": example["ID"]
+        # "id": example["id"]
     }
 
 
@@ -85,7 +76,7 @@ SYSTEM_PROMPT = (
 )
 
 def get_training_dataset(ds_train):
-    train_dataset = ds_train.map(make_conversation).select_columns(['prompt', 'ID', 'ground_truth'])
+    train_dataset = ds_train.map(make_conversation).select_columns(['prompt', 'ground_truth'])
     return train_dataset
 
 
