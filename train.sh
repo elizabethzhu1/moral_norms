@@ -1,0 +1,1 @@
+accelerate launch --config_file accelerate.yml train.py --config config.json
