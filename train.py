@@ -7,7 +7,7 @@ from datasets import load_dataset
 from trl import GRPOConfig, GRPOTrainer
 from accelerate import Accelerator
 import wandb
-from main import reward_fn, format_reward, make_conversation, SYSTEM_PROMPT, get_training_dataset
+from main import reward_fn, get_training_dataset
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--config", type=str, default="config.json")
