@@ -41,7 +41,7 @@ def reward_fn(completions, **kwargs):
     print(f"num completions per example: {len(completions)}, {len(completions[0])}")
     completion_contents = [completion[0]["content"] for completion in completions]
 
-    for completion, gt in zip(completions, kwargs['ground_truth']):
+    for completion, gt in zip(completion_contents, kwargs['ground_truth']):
         reward = 0
         reasoning = extract_text(completion, 'think')
         answer = extract_text(completion, 'answer')
