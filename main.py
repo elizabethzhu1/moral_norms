@@ -27,7 +27,7 @@ def extract_text(text, tag):
 
 
 # check if answer is correct --> if so, return 1, else return 0
-def reward_fn(result, correct_answer):
+def reward_fn(result, example):
     reward = 0
 
     reasoning = extract_text(result, 'think')
@@ -36,26 +36,24 @@ def reward_fn(result, correct_answer):
     print("REASONING:", reasoning)
     print("ANSWER:", answer)
 
-    if check_answer(answer, correct_answer):
+    if check_answer(answer, example['ground_truth']):
         reward += 2  # fix depending on how much to weigh correctness vs formatting
     
     return reward
 
 
-"""Reward function that checks if the completion has a specific format.
-This function appears redundant since we already have a more comprehensive reward_fn above 
-that not only checks format but also validates answers and provides partial rewards."""
-def format_reward(completions, **kwargs):
+"Reward function that checks if the completion has a specific format."
+def format_reward(output, **kwargs):
     # This function is likely not needed since:
     # 1. reward_fn already checks format via extract_text()
     # 2. reward_fn provides more granular rewards (0.5 for each component)
     # 3. reward_fn validates answer correctness
     # 4. reward_fn is the one actually used in train.py
     pattern = r"^<think>.*?</think>\s*<norm>.*?</norm>\s*<answer>.*?</answer>$"
-    completion_contents = [completion[0]["content"] for completion in completions]
-    matches = [re.match(pattern, content) for content in completion_contents]
-    rewards_list = [1.0 if match else 0.0 for match in matches]
-    return [1.0 if match else 0.0 for match in matches]
+    if re.fullmatch(pattern, output.strip(), re.DOTALL):
+        return 1
+    else:
+        return 0
 
 
 def make_conversation(example):
@@ -77,7 +75,8 @@ def make_conversation(example):
             A. {options[0]}
             B. {options[1]}"""},
         ],
-        "ground_truth": moral_label
+        "ground_truth": moral_label,
+        "ID": example["ID"]
     }
 
 
@@ -86,10 +85,9 @@ SYSTEM_PROMPT = (
 )
 
 def get_training_dataset(ds_train):
-
-    train_dataset = ds_train.map(make_conversation).select_columns(['prompt', 'ID', 'label'])
-
+    train_dataset = ds_train.map(make_conversation).select_columns(['prompt', 'ID', 'ground_truth'])
     return train_dataset
+
 
 if __name__ == "__main__":
     ds_train = load_dataset("demelin/moral_stories", "full", split='train')

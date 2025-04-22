@@ -10,7 +10,7 @@ ds_train = load_dataset("demelin/moral_stories", "full", split='train')
 # Process dataset to create prompts and ground truth labels
 train_dataset = get_training_dataset(ds_train)
 
-model_id = "meta-llama/Meta-Llama-3-8B-Instruct"
+model_id = "openai-community/openai-gpt"
 model = AutoModelForCausalLM.from_pretrained(
     model_id,
     torch_dtype="auto",
