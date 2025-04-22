@@ -44,26 +44,6 @@ def reward_fn(completions, **kwargs):
     
     return rewards
 
-# check if answer is correct --> if so, return 1, else return 0
-def reward_fn(result, example):
-    reward = 0
-
-    reasoning = extract_text(result, 'think')
-    answer = extract_text(result, 'answer')
-
-    print("REASONING:", reasoning)
-    print("ANSWER:", answer)
-
-    if check_answer(answer, example['ground_truth']):
-        reward = 1
-    else:
-        if reasoning is not None and answer is not None:
-            reward += 0.1
-        else:
-            reward = 0
-
-    return reward
-
 
 def make_conversation(example):
     # Remove unnecessary columns
