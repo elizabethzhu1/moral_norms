@@ -27,7 +27,7 @@ def extract_text(text, tag):
 
 
 # check if answer is correct --> if so, return 1, else return 0
-def reward_fn(result, example):
+def reward_fn(result, example, **kwargs):
     reward = 0
 
     reasoning = extract_text(result, 'think')
