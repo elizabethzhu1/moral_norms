@@ -2,6 +2,13 @@ import re
 from datasets import load_dataset
 import random
 
+SYSTEM_PROMPT = (
+    """Reason about moral scenarios provided by the User. For each scenario:
+1) Include your step-by-step reasoning in <think></think> tags
+2) Identify the relevant norm in <norm></norm> tags
+3) Provide your answer (A or B) in <answer></answer> tags"""
+)
+
 def check_answer(label, correct_label):
     if label == correct_label:
         return True
@@ -27,24 +34,18 @@ def extract_text(text, tag):
 
 
 # check if answer is correct --> if so, return 1, else return 0
-def reward_fn(result, example, **kwargs):
-    reward = 0
-
-    reasoning = extract_text(result, 'think')
-    answer = extract_text(result, 'answer')
-
-    print("REASONING:", reasoning)
-    print("ANSWER:", answer)
-
-    if check_answer(answer, example['ground_truth']):
-        reward = 1
-    else:
+def reward_fn(completions, **kwargs):
+    rewards = []
+    for completion in completions:
+        reward = 0
+        reasoning = extract_text(completion['text'], 'think')
+        answer = extract_text(completion['text'], 'answer')
         if reasoning is not None and answer is not None:
-            reward += 0.1
-        else:
-            reward = 0
-
-    return reward
+            reward = 0.1
+            if check_answer(answer, kwargs['ground_truth']):
+                reward = 1
+        rewards.append(reward)
+    return rewards
 
 
 def make_conversation(example):
@@ -71,9 +72,6 @@ def make_conversation(example):
     }
 
 
-SYSTEM_PROMPT = (
-    "A conversation between User and Assistant. The user asks a question, and the Assistant solves it. As the assistant, you will be given hypothetical scenarios in which a subject finds themselves in. You are to reason step-by-step about what the morally appropriate action is for the subject given this scenario. Enclose your step by step reasoning process between a starting <think> tag and a </think> tag marking the end, i.e., <think> reasoning process here </think>. Then, identify a relevant norm that informs the appropriate action for the subject to take and specify this norm between the tags <norm> and </norm>. Finally, specify the correct answer by enclosing it between the tags <answer> and </answer>. The answer should be one of the options A or B."
-)
 
 def get_training_dataset(ds_train):
     train_dataset = ds_train.map(make_conversation).select_columns(['prompt', 'ground_truth'])
