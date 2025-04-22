@@ -10,6 +10,8 @@ SYSTEM_PROMPT = (
 )
 
 def check_answer(label, correct_label):
+    label = label.strip().lower()
+    correct_label = correct_label.strip().lower()
     if label == correct_label:
         return True
     return False
@@ -39,13 +41,13 @@ def reward_fn(completions, **kwargs):
     print(f"num completions per example: {len(completions)}, {len(completions[0])}")
     completion_contents = [completion[0]["content"] for completion in completions]
 
-    for completion in completions:
+    for completion, gt in zip(completions, kwargs['ground_truth']):
         reward = 0
         reasoning = extract_text(completion, 'think')
         answer = extract_text(completion, 'answer')
         if reasoning is not None and answer is not None:
             reward = 0.1
-            if check_answer(answer, kwargs['ground_truth']):
+            if check_answer(answer, gt):
                 reward = 1
         rewards.append(reward)
     return rewards
