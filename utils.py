@@ -38,13 +38,14 @@ def extract_text(text, tag):
 # check if answer is correct --> if so, return 1, else return 0
 def reward_fn(completions, **kwargs):
     rewards = []
-    print(f"num completions per example: {len(completions)}, {len(completions[0])}")
     completion_contents = [completion[0]["content"] for completion in completions]
 
     for completion, gt in zip(completion_contents, kwargs['ground_truth']):
         reward = 0
         reasoning = extract_text(completion, 'think')
         answer = extract_text(completion, 'answer')
+        print(f"completion: {completion}")
+        print(f"reasoning: {reasoning}, answer: {answer}, gt: {gt}")
         if reasoning is not None and answer is not None:
             reward = 0.1
             if check_answer(answer, gt):
