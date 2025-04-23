@@ -42,6 +42,11 @@ def reward_fn(completions, **kwargs):
 
     for completion, gt in zip(completion_contents, kwargs['ground_truth']):
         reward = 0
+        if "</answer>" in completion:
+            completion = completion.split("</answer>")[0] + "</answer>"
+        else:
+            rewards.append(0)
+            continue
         reasoning = extract_text(completion, 'think')
         answer = extract_text(completion, 'answer')
         print(f"completion: {completion}")
