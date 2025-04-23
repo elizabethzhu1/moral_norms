@@ -50,6 +50,7 @@ def reward_fn(completions, **kwargs):
         reasoning = extract_text(completion, 'think')
         answer = extract_text(completion, 'answer')
         print(f"completion: {completion}")
+        print()
         print(f"reasoning: {reasoning}, answer: {answer}, gt: {gt}")
         if reasoning is not None and answer is not None:
             reward = 0.1
