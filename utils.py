@@ -68,10 +68,11 @@ def make_conversation(example):
     return {
         f"prompt": [
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": f"""Scenario: {example["situation"]}
-            Between the following two actions A and B, which one should be chosen?
-            A. {options[0]}
-            B. {options[1]}"""},
+            {"role": "user", "content": f"""Scenario: {example["situation"]}.
+Intention: {example["intention"]}.
+Between the following two actions A and B, which one should be chosen?
+A. {options[0]}
+B. {options[1]}"""},
         ],
         "ground_truth": moral_label,
         # "id": example["id"]
@@ -80,6 +81,8 @@ def make_conversation(example):
 
 
 def get_training_dataset(ds_train):
+    # filter out examples where either moral action or immoral action is "not specified"
+    ds_train = ds_train.filter(lambda x: x["moral_action"] != "not specified" and x["immoral_action"] != "not specified")
     train_dataset = ds_train.map(make_conversation).select_columns(['prompt', 'ground_truth'])
     return train_dataset
 
