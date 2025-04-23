@@ -56,7 +56,7 @@ def reward_fn(completions, **kwargs):
 
 def make_conversation(example):
     # Remove unnecessary columns
-    example = {k: v for k, v in example.items() if k in ['situation', 'moral_action', 'immoral_action']}
+    example = {k: v for k, v in example.items() if k in ['situation', 'intention', 'moral_action', 'immoral_action']}
 
     moral_label = random.choice(['A', 'B'])
     
