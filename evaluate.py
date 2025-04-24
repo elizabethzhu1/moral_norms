@@ -1,7 +1,7 @@
 import argparse
 import json
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoTokenizer
 from datasets import load_dataset
 from tqdm import tqdm
 import wandb
@@ -11,45 +11,32 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
 import re
 import csv
+import requests
+from config import config
 
 
-def load_model_and_tokenizer(model_path, use_lora=False):
-    # Load base model and tokenizer
-    model = AutoModelForCausalLM.from_pretrained(
-        model_path,
-        torch_dtype=torch.bfloat16,
-        device_map="auto",
-        attn_implementation="flash_attention_2",
+def generate_completion(prompt_text, config):
+    # Call vLLM API
+    response = requests.post(
+        "http://localhost:8000/generate",
+        json={
+            "prompt": prompt_text,
+            "max_tokens": config['max_completion_length'],
+            "temperature": config['temperature'],
+            "top_p": config['top_p'],
+            "min_p": config['min_p'],
+        }
     )
     
-    tokenizer = AutoTokenizer.from_pretrained(model_path)
-    return model, tokenizer
-
-
-def generate_completion(model, tokenizer, prompt_text, config):
-    # Tokenize the prompt
-    inputs = tokenizer(prompt_text, return_tensors="pt").to(model.device)
-    
-    # Generate completion using config parameters
-    with torch.no_grad():
-        outputs = model.generate(
-            **inputs,
-            max_new_tokens=config['max_completion_length'],
-            do_sample=True,
-            temperature=config['temperature'],
-            top_p=config['top_p'],
-            min_p=config['min_p'],
-            pad_token_id=tokenizer.eos_token_id
-        )
-    
-    # Decode the generated text
-    completion = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    
-    # Extract just the assistant's response
-    if "assistant:" in completion.lower():
-        completion = completion.lower().split("assistant:")[-1].strip()
-    
-    return completion
+    if response.status_code == 200:
+        completion = response.json()["text"]
+        # Extract just the assistant's response
+        if "assistant:" in completion.lower():
+            completion = completion.lower().split("assistant:")[-1].strip()
+        return completion
+    else:
+        print(f"Error calling vLLM API: {response.status_code}")
+        return None
 
 
 def extract_xml_tags(completion):
@@ -82,25 +69,41 @@ def extract_xml_tags(completion):
         }
 
 
-def calculate_similarity(ground_truth, generated):
-    # Load a sentence transformer model for semantic similarity
-    model = SentenceTransformer('all-MiniLM-L6-v2')
+def rate_norm_similarity(generated_norm, ground_truth_norm):
+    """
+    Use an LLM to rate the similarity between generated and ground truth norms on a scale of 1-7.
+    """
+    prompt = f"""Rate how similar these two moral norms are on a scale of 1-7 inclusive, where:
+
+            1 = Completely different meaning
+            7 = Identical or nearly identical meaning
+
+            Generated Norm: {generated_norm}
+            Ground Truth Norm: {ground_truth_norm}
+
+            Enclose your answer in <answer> tags (i.e. <answer>7</answer>)."""
+
+    completion = generate_completion(prompt, config)
+    if completion is None:
+        return None
+        
+    # Extract answer
+    answer_match = re.search(r'<answer>(.*?)</answer>', completion, re.DOTALL)
+    answer = answer_match.group(1).strip().upper() if answer_match else None
+
+    if not answer:
+        return None
+        
+    rating = int(answer)
+    if 1 <= rating <= 7:
+        return rating
     
-    # Encode the sentences
-    embeddings1 = model.encode([ground_truth])
-    embeddings2 = model.encode([generated])
-    
-    # Calculate cosine similarity
-    similarity = cosine_similarity(embeddings1, embeddings2)[0][0]
-    return similarity
+    return None
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=str, default="config.json")
-    parser.add_argument("--model_path", type=str, required=True, help="Path to the trained model on Hugging Face")
-    parser.add_argument("--use_lora", action="store_true", help="Whether the model uses LoRA")
-    parser.add_argument("--split", type=str, default="test", choices=["train", "test"], help="Dataset split to evaluate on")
     args = parser.parse_args()
 
     config = json.load(open(args.config))
@@ -109,16 +112,12 @@ def main():
     wandb.init(
         project="morals-evaluation",
         entity="cocolab",
-        name=f"eval-{config['run_name']}-{args.split}",
+        name=f"eval-{config['run_name']}",
         config=config,
     )
 
-    # Load model and tokenizer
-    model, tokenizer = load_model_and_tokenizer(args.model_path, args.use_lora)
-    model.eval()
-
     # Load dataset
-    ds_eval = load_dataset("demelin/moral_stories", "full", split=args.split)
+    ds_eval = load_dataset("demelin/moral_stories", "full", split='test')
     eval_dataset = get_training_dataset(ds_eval)
 
     results = {
@@ -137,7 +136,10 @@ def main():
         for message in example['prompt']:
             prompt_text += f"{message['role']}: {message['content']}\n"
             
-        completion = generate_completion(model, tokenizer, prompt_text, config)
+        completion = generate_completion(prompt_text, config)
+        if completion is None:
+            continue
+            
         all_completions.append(completion)
         # Extract XML tags
         extracted = extract_xml_tags(completion)
@@ -150,7 +152,7 @@ def main():
                 results['correct_answers'] += 1
                 
             # Calculate norm similarity
-            similarity = calculate_similarity(example['norm'], extracted['norm'])
+            similarity = rate_norm_similarity(example['norm'], extracted['norm'])
             results['norm_similarities'].append(similarity)
         else:
             results['invalid_completions'] += 1
@@ -166,7 +168,7 @@ def main():
     print(f"Valid completion rate: {results['valid_completion_rate']:.4f}")
 
     # Save all completions to CSV (just in case)
-    with open(f'completions_{args.split}.csv', 'w', newline='') as f:
+    with open('completions.csv', 'w', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(['completion'])  # header
         for completion in all_completions:
@@ -180,7 +182,7 @@ def main():
     })
     
     # Save detailed results
-    with open(f'evaluation_results_{args.split}.json', 'w') as f:
+    with open('evaluation_results.json', 'w') as f:
         json.dump(results, f, indent=2)
 
 
@@ -188,5 +190,7 @@ if __name__ == "__main__":
     main()
 
 # TO RUN:
-# For base model:
-# python evaluate.py --model_path "your-username/your-model-name" --config config.json
+# 1. First start the vLLM server:
+# trl vllm-serve --model Qwen/Qwen2.5-3B --tensor_parallel_size 1 --enable_prefix_caching True --gpu_memory_utilization 0.95 --host 0.0.0.0 --port 8000
+# 2. Then run the evaluation:
+# python evaluate.py --config config.json
