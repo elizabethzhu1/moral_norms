@@ -7,6 +7,7 @@ import re
 from config import config
 from vllm import LLM, SamplingParams
 from typing import Optional, Dict, Any
+from transformers import AutoTokenizer
 
 
 def extract_xml_tags(completion):
@@ -39,21 +40,29 @@ def extract_xml_tags(completion):
         }
 
 
-def rate_norm_similarity(generated_norm, ground_truth_norm, llm: LLM, config: Dict[str, Any]) -> Optional[int]:
+def rate_norm_similarity(generated_norm, ground_truth_norm, llm: LLM, config: Dict[str, Any], tokenizer: AutoTokenizer) -> Optional[int]:
     """
     Use an LLM to rate the similarity between generated and ground truth norms on a scale of 1-7.
     """
-    prompt = f"""SYSTEM: You are a helpful assistant that rates the similarity between moral norms.
-            USER: Rate how similar these two moral norms are on a scale of 1-7 inclusive, where:
+    conversation = [
+        {"role": "system", "content": "You are a helpful assistant that rates the similarity between moral norms."},
+        {"role": "user", "content": f"""Rate how similar these two moral norms are on a scale of 1-7 inclusive, where:
 
-            1 = Completely different meaning
-            7 = Identical or nearly identical meaning
+1 = Completely different meaning
+7 = Identical or nearly identical meaning
 
-            Generated Norm: {generated_norm}
-            Ground Truth Norm: {ground_truth_norm}
+Generated Norm: {generated_norm}
+Ground Truth Norm: {ground_truth_norm}
 
-            Enclose your answer in <answer> tags (i.e. <answer>7</answer>).
-            ASSISTANT:"""
+Enclose your answer in <answer> tags (i.e. <answer>7</answer>)."""}
+    ]
+
+    # Apply chat template
+    formatted_prompt = tokenizer.apply_chat_template(
+        conversation,
+        tokenize=False,
+        add_generation_prompt=True
+    )
 
     # Set up sampling parameters
     sampling_params = SamplingParams(
@@ -61,12 +70,12 @@ def rate_norm_similarity(generated_norm, ground_truth_norm, llm: LLM, config: Di
         temperature=config['temperature'],
         top_p=config['top_p'],
         min_p=config['min_p'],
-        stop=["USER:"]  # Stop generation at the next user turn
+        stop=tokenizer.eos_token  # Stop at end of sequence
     )
     
     try:
         # Generate completion to compare norm with ground truth norm
-        outputs = llm.generate(prompt, sampling_params)
+        outputs = llm.generate(formatted_prompt, sampling_params)
         completion = outputs[0].outputs[0].text
         
         # Extract rating from 1 to 7 inclusive
@@ -99,6 +108,9 @@ def main():
         name=f"eval-{config['run_name']}",
         config=config,
     )
+
+    # Initialize tokenizer
+    tokenizer = AutoTokenizer.from_pretrained(args.model_path)
 
     # Initialize vLLM for similarity rating
     llm = LLM(
@@ -136,7 +148,7 @@ def main():
                 results['correct_answers'] += 1
                 
             # Calculate norm similarity
-            similarity = rate_norm_similarity(response['norm'], extracted['norm'], llm, config)
+            similarity = rate_norm_similarity(response['norm'], extracted['norm'], llm, config, tokenizer)
             if similarity is not None:
                 results['norm_similarities'].append(similarity)
             else:

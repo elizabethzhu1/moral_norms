@@ -1,40 +1,25 @@
 import requests
 import json
 import argparse
-from typing import Optional, Dict, Any, Tuple
+from typing import Optional, Dict, Any
 from datasets import load_dataset
 from utils import get_training_dataset
 from tqdm import tqdm
 from vllm import LLM, SamplingParams
 from utils import make_conversation, SYSTEM_PROMPT
+from transformers import AutoTokenizer
 
 
-def extract_user_prompt(conversation: Dict[str, Any]) -> str:
+def generate_completion(conversation: list, config: Dict[str, Any], llm: LLM, tokenizer: AutoTokenizer) -> Optional[str]:
     """
-    Extract the user prompt from the conversation format.
-    The conversation format from utils.py is:
-    {
-        "prompt": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": "..."}
-        ],
-        "ground_truth": "..."
-    }
+    Generate a completion using vLLM with proper chat template formatting.
     """
-    for message in conversation["prompt"]:
-        if message["role"] == "user":
-            return message["content"]
-    return ""
-
-
-def generate_completion(system_prompt: str, user_prompt: str, config: Dict[str, Any], llm: LLM) -> Optional[str]:
-    """
-    Generate a completion using vLLM with proper conversation formatting.
-    """
-    # Format the complete prompt to match training format
-    complete_prompt = f"""SYSTEM: {system_prompt}
-                    USER: {user_prompt}
-                    ASSISTANT:"""
+    # Apply chat template to format the conversation
+    formatted_prompt = tokenizer.apply_chat_template(
+        conversation,
+        tokenize=False,
+        add_generation_prompt=True
+    )
     
     # Set up sampling parameters
     sampling_params = SamplingParams(
@@ -42,12 +27,12 @@ def generate_completion(system_prompt: str, user_prompt: str, config: Dict[str, 
         temperature=config['temperature'],
         top_p=config['top_p'],
         min_p=config['min_p'],
-        stop=["USER:"]  # Stop generation at the next user turn
+        stop=tokenizer.eos_token  # Stop at end of sequence
     )
     
     try:
         # Generate completion
-        outputs = llm.generate(complete_prompt, sampling_params)
+        outputs = llm.generate(formatted_prompt, sampling_params)
         completion = outputs[0].outputs[0].text.strip()
         return completion
     except Exception as e:
@@ -66,12 +51,17 @@ def main():
     with open(args.config) as f:
         config = json.load(f)
         
-    # Initialize vLLM
+    # Initialize tokenizer
+    tokenizer = AutoTokenizer.from_pretrained(args.model_path)
+        
+    # Initialize vLLM with chat template configuration
     llm = LLM(
         model=args.model_path,
         tensor_parallel_size=1,
         gpu_memory_utilization=config.get('vllm_gpu_memory_utilization', 0.95),
         enable_prefix_caching=config.get('vllm_enable_prefix_caching', True),
+        chat_template=tokenizer.chat_template,  # Pass the chat template to vLLM
+        trust_remote_code=True,  # Required for some chat templates
     )
         
     # Load evaluation dataset
@@ -83,17 +73,16 @@ def main():
     for i, example in enumerate(tqdm(eval_dataset)):
         # Get the conversation format from utils.py
         conversation = make_conversation(example)
-        user_prompt = extract_user_prompt(conversation)
+        prompt = conversation["prompt"]
         ground_truth = conversation["ground_truth"]
             
         # Generate completion
-        completion = generate_completion(SYSTEM_PROMPT, user_prompt, config, llm)
+        completion = generate_completion(prompt, config, llm, tokenizer)
         
         # Store result
         result = {
             'example_id': i,
-            'system_prompt': SYSTEM_PROMPT,
-            'user_prompt': user_prompt,
+            'prompt': prompt,
             'completion': completion,
             'ground_truth': ground_truth,
             'norm': example['norm']
@@ -102,7 +91,7 @@ def main():
         
         if completion:
             print(f"\nExample {i+1}/{len(eval_dataset)}:")
-            print(f"User Prompt: {user_prompt}")
+            print(f"Prompt: {prompt}")
             print(f"Completion: {completion}")
         else:
             print(f"\nFailed to generate completion for example {i+1}/{len(eval_dataset)}")
