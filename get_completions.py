@@ -1,12 +1,11 @@
-import requests
 import json
 import argparse
 from typing import Optional, Dict, Any
 from datasets import load_dataset
 from utils import get_eval_dataset
 from tqdm import tqdm
-from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
-from utils import make_conversation, SYSTEM_PROMPT
+from transformers import AutoTokenizer, AutoModelForCausalLM
+from utils import make_conversation
 import torch
 
 def generate_completion(conversation: str, config: Dict[str, Any], model, tokenizer) -> Optional[str]:
@@ -17,13 +16,6 @@ def generate_completion(conversation: str, config: Dict[str, Any], model, tokeni
             tokenize=False,
             add_generation_prompt=True
         )
-
-        # formatted_prompt = f"""<|im_start|>system
-        #                 {SYSTEM_PROMPT}<|im_end|>
-        #                 <|im_start|>user
-        #                 {conversation["prompt"][1]["content"]}<|im_end|>
-        #                 <|im_start|>assistant
-        #                 """</edit>
         
         # Tokenize and move to device
         inputs = tokenizer(formatted_prompt, return_tensors="pt").to(model.device)
