@@ -3,37 +3,53 @@ import json
 import argparse
 from typing import Optional, Dict, Any
 from datasets import load_dataset
-from utils import get_training_dataset
+from utils import get_eval_dataset
 from tqdm import tqdm
-from vllm import LLM, SamplingParams
+from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from utils import make_conversation, SYSTEM_PROMPT
-from transformers import AutoTokenizer
+import torch
 
-
-def generate_completion(conversation: list, config: Dict[str, Any], llm: LLM, tokenizer: AutoTokenizer) -> Optional[str]:
-    """
-    Generate a completion using vLLM with proper chat template formatting.
-    """
-    # Apply chat template to format the conversation
-    formatted_prompt = tokenizer.apply_chat_template(
-        conversation,
-        tokenize=False,
-        add_generation_prompt=True
-    )
-    
-    # Set up sampling parameters
-    sampling_params = SamplingParams(
-        max_tokens=config['max_completion_length'],
-        temperature=config['temperature'],
-        top_p=config['top_p'],
-        min_p=config['min_p'],
-        stop=tokenizer.eos_token  # Stop at end of sequence
-    )
-    
+def generate_completion(conversation: str, config: Dict[str, Any], model, tokenizer) -> Optional[str]:
     try:
-        # Generate completion
-        outputs = llm.generate(formatted_prompt, sampling_params)
-        completion = outputs[0].outputs[0].text.strip()
+        # Apply chat template
+        formatted_prompt = tokenizer.apply_chat_template(
+            conversation,
+            tokenize=False,
+            add_generation_prompt=True
+        )
+
+        # formatted_prompt = f"""<|im_start|>system
+        #                 {SYSTEM_PROMPT}<|im_end|>
+        #                 <|im_start|>user
+        #                 {conversation["prompt"][1]["content"]}<|im_end|>
+        #                 <|im_start|>assistant
+        #                 """</edit>
+        
+        # Tokenize and move to device
+        inputs = tokenizer(formatted_prompt, return_tensors="pt").to(model.device)
+        
+        # Use torch.inference_mode() to disable autograd overhead
+        with torch.inference_mode():
+            outputs = model.generate(
+                **inputs,
+                max_new_tokens=config['max_completion_length'],
+                temperature=config['temperature'],
+                top_p=config['top_p'],
+                do_sample=True,
+                pad_token_id=tokenizer.eos_token_id,
+                use_cache=True,  # Enable KV cache
+                num_beams=1,  # Use greedy decoding for speed
+            )
+
+        generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+        
+        # Extract text after 'assistant'
+        assistant_start = generated_text.find('assistant\n')
+        if assistant_start != -1:
+            completion = generated_text[assistant_start + len('assistant'):].strip()
+        else:
+            completion = generated_text  # Fallback if 'assistant' not found
+
         return completion
     except Exception as e:
         print(f"Error generating completion: {e}")
@@ -41,9 +57,8 @@ def generate_completion(conversation: list, config: Dict[str, Any], llm: LLM, to
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Generate completions using vLLM')
+    parser = argparse.ArgumentParser(description='Generate completions using local model')
     parser.add_argument('--config', type=str, required=True, help='Path to config JSON file')
-    parser.add_argument('--model_path', type=str, required=True, help='Path to trained model (Hugging Face repo or local path)')
     parser.add_argument('--output', type=str, default='model_responses.json', help='Output file path')
     args = parser.parse_args()
     
@@ -51,22 +66,26 @@ def main():
     with open(args.config) as f:
         config = json.load(f)
         
-    # Initialize tokenizer
-    tokenizer = AutoTokenizer.from_pretrained(args.model_path)
+    # Check if MPS is available
+    device = "mps" if torch.backends.mps.is_available() else "cpu"
+    print(f"Using device: {device}")
         
-    # Initialize vLLM with chat template configuration
-    llm = LLM(
-        model=args.model_path,
-        tensor_parallel_size=1,
-        gpu_memory_utilization=config.get('vllm_gpu_memory_utilization', 0.95),
-        enable_prefix_caching=config.get('vllm_enable_prefix_caching', True),
-        chat_template=tokenizer.chat_template,  # Pass the chat template to vLLM
-        trust_remote_code=True,  # Required for some chat templates
+    # Initialize tokenizer and model
+    tokenizer = AutoTokenizer.from_pretrained("./clean_morals_mvp")
+    model = AutoModelForCausalLM.from_pretrained(
+        "./clean_morals_mvp",
+        device_map=device,  # Use MPS if available
+        torch_dtype=torch.float16,  
+        low_cpu_mem_usage=True,     # Optimize memory usage
+        trust_remote_code=True
     )
-        
+
+    # Set model to evaluation mode and enable optimizations
+    model.eval()
+    
     # Load evaluation dataset
-    ds_eval = load_dataset("demelin/moral_stories", "full", split='test')
-    eval_dataset = get_training_dataset(ds_eval)
+    ds_eval = load_dataset("demelin/moral_stories", "gen-norm$actions+context+consequences-norm_distance", split='test[:50%]')
+    eval_dataset = get_eval_dataset(ds_eval)
     
     # Generate completions
     results = []
@@ -77,7 +96,7 @@ def main():
         ground_truth = conversation["ground_truth"]
             
         # Generate completion
-        completion = generate_completion(prompt, config, llm, tokenizer)
+        completion = generate_completion(prompt, config, model, tokenizer)
         
         # Store result
         result = {
@@ -85,7 +104,7 @@ def main():
             'prompt': prompt,
             'completion': completion,
             'ground_truth': ground_truth,
-            'norm': example['norm']
+            'norm': example['norm'],
         }
         results.append(result)
         

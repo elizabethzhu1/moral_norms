@@ -1,0 +1,5 @@
+requests>=2.32.3
+datasets>=2.16.1
+tqdm>=4.66.1
+vllm>=0.2.7
+transformers>=4.37.2 
