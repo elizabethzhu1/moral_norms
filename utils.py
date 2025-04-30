@@ -2,24 +2,26 @@ import re
 from datasets import load_dataset
 import random
 
-SYSTEM_PROMPT = (
+PROMPT = (
     """Reason about the following moral scenario provided by the User. For each scenario, you must provide ALL of the following in order:
 
-        1) Your step-by-step reasoning between <think> and </think> tags
-        2) The relevant moral norm (a standard of right or wrong behavior that is widely accepted within our society) between <norm> and </norm> tags
-        3) Your final answer (ONLY 'A' or 'B') between <answer> and </answer> tags
+1) Your step-by-step reasoning between <think> and </think> tags
+3) Your final answer (ONLY the option letter) between <answer> and </answer> tags
 
-        Your response MUST follow the following format:
-        <think>
-        [Your detailed reasoning here]
-        </think>
-        <norm>
-        [The relevant moral norm]
-        </norm>
-        <answer>
-        A
-        </answer>
-    """
+Your response MUST follow the following format:
+Assistant: Let's think step by step:
+<think>
+[Your detailed reasoning here]
+</think>
+<norm>
+[The relevant moral norm]
+</norm>
+<answer>
+A/B/C/D/E
+</answer>
+
+User: {scenario}
+Assistant: Let's think step by step:"""
 )
 
 def check_answer(label, correct_label):
@@ -84,16 +86,13 @@ def make_conversation(example):
     else:
         options = [example["immoral_action"], example["moral_action"]]
 
+    scenario = f"""{example["situation"]}. {example["intention"]}.
+Between the following two actions A and B, which one should be chosen?
+A. {options[0]}
+B. {options[1]}"""
     # should we modify to be formatted with xml tags like how we're evaluating?
     return {
-        f"prompt": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": f"""Scenario: {example["situation"]}.
-            Intention: {example["intention"]}.
-            Between the following two actions A and B, which one should be chosen?
-            A. {options[0]}
-            B. {options[1]}"""},
-        ],
+        "prompt": PROMPT.format(scenario=scenario),
         "ground_truth": moral_label,
         # "id": example["id"]
     }
