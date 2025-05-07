@@ -73,7 +73,7 @@ def reward_fn(completions, **kwargs):
     return rewards
 
 
-def make_conversation(example):
+def make_conversation_moral_stories(example):
     # Remove unnecessary columns
     example = {k: v for k, v in example.items() if k in ['situation', 'intention', 'moral_action', 'immoral_action']}
 
@@ -94,15 +94,84 @@ def make_conversation(example):
             A. {options[0]}
             B. {options[1]}"""},
         ],
-        "ground_truth": moral_label,
-        # "id": example["id"]
+        "ground_truth": moral_label
+    }
+
+
+def make_conversation_scruples(example):
+    # Remove unnecessary columns
+    example = {k: v for k, v in example.items() if k in ['action', 'text', 'post_type', 'binared_label']}
+
+    ground_truth_label = random.choice(['A', 'B'])
+
+    # In dataset, 0 is 'Right' and 1 is 'Wrong'
+    ground_truth = example['binared_label']
+    
+    if ground_truth == 'Right':
+        not_ground_truth = 'Wrong'
+    else:
+        not_ground_truth = 'Right'
+    
+    if ground_truth_label == 'A':
+        options = [ground_truth, not_ground_truth]
+    else:
+        options = [not_ground_truth, ground_truth]
+
+    # should we modify to be formatted with xml tags like how we're evaluating?
+    return {
+        f"prompt": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": f"""Scenario: {example['text']}.
+            Action: {example['action']}
+            Between the following two judgments A and B, which one reflects the author's action?
+            A. {options[0]}
+            B. {options[1]}"""},
+        ],
+        "ground_truth": ground_truth
+    }
+
+
+def make_conversation_ethics(example):
+    # Remove unnecessary columns
+    example = {k: v for k, v in example.items() if k in ['label', 'input']}
+
+    ground_truth_label = random.choice(['A', 'B'])
+
+    # In dataset, 0 is 'Right' and 1 is 'Wrong'
+    if example['label'] == 0:
+        ground_truth = 'Right'
+        not_ground_truth = 'Wrong'
+    else:
+        ground_truth = 'Wrong'
+        not_ground_truth = 'Right'
+    
+    if ground_truth_label == 'A':
+        options = [ground_truth, not_ground_truth]
+    else:
+        options = [not_ground_truth, ground_truth]
+    
+    return {
+        f"prompt": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": f"""Scenario: {example['input']}.
+            Between the following two judgments A and B, which one reflects this action?
+            A. {options[0]}
+            B. {options[1]}"""},
+        ],
+        "ground_truth": ground_truth_label
     }
 
 
 def get_training_dataset(ds_train):
     # filter out examples where either moral action or immoral action is "not specified"
     ds_train = ds_train.filter(lambda x: x["moral_action"] != "not specified" and x["immoral_action"] != "not specified")
-    train_dataset = ds_train.map(make_conversation).select_columns(['prompt', 'ground_truth'])
+
+    train_dataset_ethics = ds_train.map(make_conversation_ethics).select_columns(['prompt', 'ground_truth'])
+    train_dataset_moral = ds_train.map(make_conversation_moral_stories).select_columns(['prompt', 'ground_truth'])
+    train_dataset_scruples = ds_train.map(make_conversation_scruples).select_columns(['prompt', 'ground_truth'])
+
+    train_dataset = train_dataset_ethics + train_dataset_moral + train_dataset_scruples
+
     return train_dataset
 
 
