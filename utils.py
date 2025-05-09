@@ -109,10 +109,13 @@ def make_conversation_scruples(example):
     # In dataset, 0 is 'Right' and 1 is 'Wrong'
     ground_truth = example['binarized_label']
     
-    if ground_truth == 'Right':
-        not_ground_truth = 'Wrong'
-    else:
+    # Just fix formatting
+    if ground_truth == "WRONG":
+        ground_truth = 'Wrong'
         not_ground_truth = 'Right'
+    else:
+        ground_truth = 'Right'
+        not_ground_truth = 'Wrong'
     
     if ground_truth_label == 'A':
         options = [ground_truth, not_ground_truth]
@@ -129,7 +132,7 @@ def make_conversation_scruples(example):
             A. {options[0]}
             B. {options[1]}"""},
         ],
-        "ground_truth": ground_truth
+        "ground_truth": ground_truth_label
     }
 
 
