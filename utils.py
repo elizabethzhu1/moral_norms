@@ -3,6 +3,7 @@ from datasets import load_dataset, concatenate_datasets
 import random
 import pandas as pd
 import json
+from utils import make_conversation
 
 PROMPT = (
     """Reason about the following moral scenario provided by the User. For each scenario, you must provide ALL of the following in order:
@@ -98,14 +99,6 @@ B. {options[1]}"""
         "ground_truth": moral_label,
         # "id": example["id"]
     }
-
-
-def get_training_dataset(ds_train):
-    # filter out examples where either moral action or immoral action is "not specified"
-    ds_train = ds_train.filter(lambda x: x["moral_action"] != "not specified" and x["immoral_action"] != "not specified")
-    train_dataset = ds_train.map(make_conversation).select_columns(['prompt', 'ground_truth'])
-
-    return train_dataset
 
 
 def make_conversation_scruples(example):
