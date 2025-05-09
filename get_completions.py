@@ -67,7 +67,7 @@ def main():
     model = AutoModelForCausalLM.from_pretrained(
         "./clean_morals_mvp",
         device_map=device,  # Use MPS if available
-        torch_dtype=torch.float16,  
+        torch_dtype=torch.bfloat16,  
         low_cpu_mem_usage=True,     # Optimize memory usage
         trust_remote_code=True
     )

@@ -4,24 +4,26 @@ import random
 import pandas as pd
 import json
 
-SYSTEM_PROMPT = (
+PROMPT = (
     """Reason about the following moral scenario provided by the User. For each scenario, you must provide ALL of the following in order:
 
-        1) Your step-by-step reasoning between <think> and </think> tags
-        2) The relevant moral norm (a standard of right or wrong behavior that is widely accepted within our society) between <norm> and </norm> tags
-        3) Your final answer (ONLY 'A' or 'B') between <answer> and </answer> tags
+1) Your step-by-step reasoning between <think> and </think> tags
+3) Your final answer (ONLY the option letter) between <answer> and </answer> tags
 
-        Your response MUST follow the following format:
-        <think>
-        [Your detailed reasoning here]
-        </think>
-        <norm>
-        [The relevant moral norm]
-        </norm>
-        <answer>
-        A
-        </answer>
-    """
+Your response MUST follow the following format:
+Assistant: Let's think step by step:
+<think>
+[Your detailed reasoning here]
+</think>
+<norm>
+[The relevant moral norm]
+</norm>
+<answer>
+A/B/C/D/E
+</answer>
+
+User: {scenario}
+Assistant: Let's think step by step:"""
 )
 
 def check_answer(label, correct_label):
@@ -86,8 +88,22 @@ def make_conversation_moral_stories(example):
     else:
         options = [example["immoral_action"], example["moral_action"]]
 
+    scenario = f"""{example["situation"]}. {example["intention"]}.
+Between the following two actions A and B, which one should be chosen?
+A. {options[0]}
+B. {options[1]}"""
     # should we modify to be formatted with xml tags like how we're evaluating?
     return {
+        "prompt": PROMPT.format(scenario=scenario),
+        "ground_truth": moral_label,
+        # "id": example["id"]
+    }
+
+
+def get_training_dataset(ds_train):
+    # filter out examples where either moral action or immoral action is "not specified"
+    ds_train = ds_train.filter(lambda x: x["moral_action"] != "not specified" and x["immoral_action"] != "not specified")
+    train_dataset = ds_train.map(make_conversation).select_columns(['prompt', 'ground_truth'])
         f"prompt": [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": f"""Scenario: {example["situation"]}.
