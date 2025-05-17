@@ -281,20 +281,26 @@ def make_conversation_moca(example):
 
 def get_training_dataset(ds_train, dataset_name):
     if dataset_name == "ethics_commonsense":
-        train_dataset = ds_train.map(make_conversation_ethics_commonsense).select_columns(['prompt', 'ground_truth'])
+        train_dataset = ds_train.map(make_conversation_ethics_commonsense)
+        train_dataset = train_dataset.select_columns(['prompt', 'ground_truth'])
     elif dataset_name == "ethics_deontology":
-        train_dataset = ds_train.map(make_conversation_ethics_deontology).select_columns(['prompt', 'ground_truth'])
+        train_dataset = ds_train.map(make_conversation_ethics_deontology)
+        train_dataset = train_dataset.select_columns(['prompt', 'ground_truth'])
     elif dataset_name == "ethics_justice":
-        train_dataset = ds_train.map(make_conversation_ethics_justice).select_columns(['prompt', 'ground_truth'])
+        train_dataset = ds_train.map(make_conversation_ethics_justice)
+        train_dataset = train_dataset.select_columns(['prompt', 'ground_truth'])
     elif dataset_name == "utilitarianism":
-        train_dataset = ds_train.map(make_conversation_utilitarianism).select_columns(['prompt', 'ground_truth'])
+        train_dataset = ds_train.map(make_conversation_utilitarianism)
+        train_dataset = train_dataset.select_columns(['prompt', 'ground_truth'])
     elif dataset_name == "moral_stories":
         # filter out examples where either moral action or immoral action is "not specified"
         ds_train = ds_train.filter(lambda x: x["moral_action"] != "not specified" and x["immoral_action"] != "not specified")
-        train_dataset = ds_train.map(make_conversation_moral_stories).select_columns(['prompt', 'ground_truth'])
+        train_dataset = ds_train.map(make_conversation_moral_stories)
+        train_dataset = train_dataset.select_columns(['prompt', 'ground_truth'])
     elif dataset_name == "scruples":
         ds_train = ds_train.filter(lambda x: x["action"] is not None)
-        train_dataset = ds_train.map(make_conversation_scruples).select_columns(['prompt', 'ground_truth'])
+        train_dataset = ds_train.map(make_conversation_scruples)
+        train_dataset = train_dataset.select_columns(['prompt', 'ground_truth'])
 
     return train_dataset
 
@@ -303,20 +309,27 @@ def get_eval_dataset(ds_eval, dataset_name):
     # Filter Moral Stories dataset
     if dataset_name == "moral_stories":
         ds_eval = ds_eval.filter(lambda x: x["moral_action"] != "not specified" and x["immoral_action"] != "not specified")
-        eval_dataset = ds_eval.map(make_conversation_moral_stories, remove_columns=ds_eval.column_names)
+        eval_dataset = ds_eval.map(make_conversation_moral_stories)
+        eval_dataset = eval_dataset.select_columns(['prompt', 'ground_truth'])
     elif dataset_name == "scruples":
         ds_eval = ds_eval.filter(lambda x: x["action"] is not None)
-        eval_dataset = ds_eval.map(make_conversation_scruples, remove_columns=ds_eval.column_names)
+        eval_dataset = ds_eval.map(make_conversation_scruples)
+        eval_dataset = eval_dataset.select_columns(['prompt', 'ground_truth'])
     elif dataset_name == "ethics_commonsense":
-        eval_dataset = ds_eval.map(make_conversation_ethics_commonsense, remove_columns=ds_eval.column_names)
+        eval_dataset = ds_eval.map(make_conversation_ethics_commonsense)
+        eval_dataset = eval_dataset.select_columns(['prompt', 'ground_truth'])
     elif dataset_name == "ethics_deontology":
-        eval_dataset = ds_eval.map(make_conversation_ethics_deontology, remove_columns=ds_eval.column_names)
+        eval_dataset = ds_eval.map(make_conversation_ethics_deontology)
+        eval_dataset = eval_dataset.select_columns(['prompt', 'ground_truth'])
     elif dataset_name == "ethics_justice":
-        eval_dataset = ds_eval.map(make_conversation_ethics_justice, remove_columns=ds_eval.column_names)
+        eval_dataset = ds_eval.map(make_conversation_ethics_justice)
+        eval_dataset = eval_dataset.select_columns(['prompt', 'ground_truth'])
     elif dataset_name == "utilitarianism":
-        eval_dataset = ds_eval.map(make_conversation_utilitarianism, remove_columns=ds_eval.column_names)
+        eval_dataset = ds_eval.map(make_conversation_utilitarianism)
+        eval_dataset = eval_dataset.select_columns(['prompt', 'ground_truth'])
     elif dataset_name == "moca":
-        eval_dataset = ds_eval.map(make_conversation_moca, remove_columns=ds_eval.column_names)
+        eval_dataset = ds_eval.map(make_conversation_moca)
+        eval_dataset = eval_dataset.select_columns(['prompt', 'ground_truth'])
 
     return eval_dataset
 
@@ -350,17 +363,19 @@ def get_full_training_dataset():
 
     train_dataset = concatenate_datasets([
         train_dataset_moral_stories,
-        train_dataset_ethics_commensense,
+        train_dataset_ethics_commensense, 
         train_dataset_ethics_deontology,
         train_dataset_ethics_justice,
         train_dataset_utilitarianism,
         train_dataset_scruples
-    ])
+    ]) 
 
     # Shuffle the dataset
     train_dataset = train_dataset.shuffle(seed=42)
 
-    print(train_dataset[0])
+    # Save dataset to CSV file
+    train_dataset.to_csv('train_dataset.csv', index=False)
+    print("\nSaved training dataset to train_dataset.csv")
 
     return train_dataset
 
@@ -377,14 +392,16 @@ def get_full_eval_dataset():
     # Load MOCA dataset from local JSON file
     ds_eval_moca = load_dataset("json", data_files="moca_dataset.json", split="train")
 
-    eval_dataset_moral_stories = get_eval_dataset(ds_eval_moral_stories, "moral_stories")
-    eval_dataset_scruples = get_eval_dataset(ds_eval_scruples, "scruples")
-    eval_dataset_ethics_commensense = get_eval_dataset(ds_eval_ethics_commensense, "ethics_commonsense")
-    eval_dataset_ethics_deontology = get_eval_dataset(ds_eval_ethics_deontology, "ethics_deontology")
-    eval_dataset_ethics_justice = get_eval_dataset(ds_eval_ethics_justice, "ethics_justice")
-    eval_dataset_ethics_utilitarianism = get_eval_dataset(ds_eval_ethics_utilitarianism, "utilitarianism")
-    eval_dataset_moca = get_eval_dataset(ds_eval_moca, "moca")
+    # Process each dataset and add dataset name
+    eval_dataset_moral_stories = get_eval_dataset(ds_eval_moral_stories, "moral_stories").map(lambda x: {"dataset_name": "moral_stories", **x})
+    eval_dataset_scruples = get_eval_dataset(ds_eval_scruples, "scruples").map(lambda x: {"dataset_name": "scruples", **x})
+    eval_dataset_ethics_commensense = get_eval_dataset(ds_eval_ethics_commensense, "ethics_commonsense").map(lambda x: {"dataset_name": "ethics_commonsense", **x})
+    eval_dataset_ethics_deontology = get_eval_dataset(ds_eval_ethics_deontology, "ethics_deontology").map(lambda x: {"dataset_name": "ethics_deontology", **x})
+    eval_dataset_ethics_justice = get_eval_dataset(ds_eval_ethics_justice, "ethics_justice").map(lambda x: {"dataset_name": "ethics_justice", **x})
+    eval_dataset_ethics_utilitarianism = get_eval_dataset(ds_eval_ethics_utilitarianism, "utilitarianism").map(lambda x: {"dataset_name": "utilitarianism", **x})
+    eval_dataset_moca = get_eval_dataset(ds_eval_moca, "moca").map(lambda x: {"dataset_name": "moca", **x})
 
+    # Save first rows for inspection
     eval_first_rows = {
         "moral_stories": eval_dataset_moral_stories[0],
         "ethics_commonsense": eval_dataset_ethics_commensense[0],
@@ -397,7 +414,8 @@ def get_full_eval_dataset():
 
     with open('eval_first_rows.json', 'w') as f:
         json.dump(eval_first_rows, f, indent=4)
-    
+
+    # Concatenate all datasets
     eval_dataset = concatenate_datasets([
         eval_dataset_moral_stories,
         eval_dataset_scruples,
@@ -410,8 +428,10 @@ def get_full_eval_dataset():
 
     # Shuffle the dataset
     eval_dataset = eval_dataset.shuffle(seed=42)
-
-    print(eval_dataset[0])
+    
+    # Save dataset to CSV file
+    eval_dataset.to_csv('eval_dataset.csv', index=False)
+    print("\nSaved evaluation dataset to eval_dataset.csv")
     
     return eval_dataset
     
@@ -419,7 +439,9 @@ def get_full_eval_dataset():
 
 def main():
     # train_dataset = get_full_training_dataset()
-    eval_dataset = get_full_eval_dataset()
+    get_full_training_dataset()
+    get_full_eval_dataset()
+
 
 if __name__ == "__main__":
     main()
