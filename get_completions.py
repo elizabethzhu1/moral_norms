@@ -1,12 +1,26 @@
 import json
 import argparse
 from typing import Optional, Dict, Any
-from datasets import load_dataset
+from datasets import load_dataset, concatenate_datasets
 from utils import get_eval_dataset
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from utils import make_conversation
 import torch
+
+def get_eval_dataset():
+    ds_eval_moral_stories = load_dataset("demelin/moral_stories", "gen-norm$actions+context+consequences-norm_distance", split='test')
+    ds_eval_scruples = load_dataset("metaeval/scruples", split='test')
+    ds_eval_ethics_commensense = load_dataset("hendrycks/ethics", "commonsense", split='test')
+    ds_eval_ethics_deontology = load_dataset("hendrycks/ethics", "deontology", split='test')
+    ds_eval_ethics_justice = load_dataset("hendrycks/ethics", "justice", split='test')
+    ds_eval_utilitarianism = load_dataset("hendrycks/ethics", "utilitarianism", split='test')
+
+    # concatenate all datasets
+    ds_eval = concatenate_datasets([ds_eval_moral_stories, ds_eval_scruples, ds_eval_ethics_commensense, ds_eval_ethics_deontology, ds_eval_ethics_justice, ds_eval_utilitarianism])
+
+    return ds_eval
+    
 
 def generate_completion(conversation: str, config: Dict[str, Any], model, tokenizer) -> Optional[str]:
     try:
@@ -76,8 +90,7 @@ def main():
     model.eval()
     
     # Load evaluation dataset
-    ds_eval = load_dataset("demelin/moral_stories", "gen-norm$actions+context+consequences-norm_distance", split='test[:50%]')
-    eval_dataset = get_eval_dataset(ds_eval)
+    eval_dataset = get_eval_dataset()
     
     # Generate completions
     results = []
