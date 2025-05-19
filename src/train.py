@@ -69,7 +69,7 @@ training_args = GRPOConfig(
     beta=config['beta'], # KL
     use_vllm=True,
     vllm_server_host=config['vllm_server_host'],
-    vllm_server_port=8000,
+    vllm_server_port=8001,
     vllm_gpu_memory_utilization=0.95,
     vllm_enable_prefix_caching=True,
     )
