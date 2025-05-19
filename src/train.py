@@ -1,5 +1,7 @@
 import argparse
 import json
+import sys
+import pathlib
 
 import torch
 from transformers import AutoModelForCausalLM
@@ -7,7 +9,8 @@ from datasets import load_dataset
 from trl import GRPOConfig, GRPOTrainer
 from accelerate import Accelerator
 import wandb
-from utils import reward_fn, get_training_dataset
+
+from src.utils import reward_fn, get_full_training_dataset
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--config", type=str, default="config.json")
@@ -24,10 +27,7 @@ if accelerator.is_main_process:
         config=config,
     )
 
-ds_train = load_dataset("demelin/moral_stories", "full", split='train')
-
-# Process dataset to create prompts and ground truth labels
-train_dataset = get_training_dataset(ds_train)
+train_dataset = get_full_training_dataset()
 
 model_id = config['model_id']
 model = AutoModelForCausalLM.from_pretrained(
@@ -35,18 +35,6 @@ model = AutoModelForCausalLM.from_pretrained(
     torch_dtype=torch.bfloat16,
     attn_implementation="flash_attention_2",
 )
-
-# lora_config = LoraConfig(
-#     task_type="CAUSAL_LM",
-#     r=8,
-#     lora_alpha=32,
-#     lora_dropout=0.1,
-#     target_modules=["q_proj", "v_proj"],
-# )
-
-# model = get_peft_model(model, lora_config)
-
-# model.print_trainable_parameters()
 
 # Configure training arguments using GRPOConfig
 training_args = GRPOConfig(
@@ -68,7 +56,6 @@ training_args = GRPOConfig(
     push_to_hub=False,
     save_strategy="steps",
     save_steps=config['save_steps'],
-    use_vllm=True,
     gradient_checkpointing=True,
     torch_compile=True,
     temperature=config['temperature'],
@@ -77,7 +64,10 @@ training_args = GRPOConfig(
     epsilon_high=0.28,
     epsilon=0.2,
     scale_rewards=False, # DR GRPO
+    loss_type="dr_grpo",
+    mask_truncated_completions=True,
     beta=config['beta'], # KL
+    use_vllm=True,
     vllm_server_host=config['vllm_server_host'],
     vllm_server_port=8000,
     vllm_gpu_memory_utilization=0.95,
@@ -92,6 +82,3 @@ trainer = GRPOTrainer(
 )
 
 trainer.train()
-
-trainer.save_model(training_args.output_dir)
-trainer.push_to_hub(dataset_name="moral_norms")

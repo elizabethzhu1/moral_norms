@@ -15,7 +15,7 @@ Assistant: Let's think step by step:
 [Your detailed reasoning here]
 </think>
 <answer>
-A/B/C
+[A or B]
 </answer>
 
 User: {scenario}
@@ -355,7 +355,7 @@ def get_full_training_dataset():
         "scruples": train_dataset_scruples[0]
     }
 
-    with open('first_rows.json', 'w') as f:
+    with open('data/first_rows.json', 'w') as f:
         json.dump(first_rows, f, indent=4)
 
     train_dataset = concatenate_datasets([
@@ -369,11 +369,6 @@ def get_full_training_dataset():
 
     # Shuffle the dataset
     train_dataset = train_dataset.shuffle(seed=42)
-
-    # Save dataset to CSV file
-    train_dataset.to_csv('train_dataset.csv', index=False)
-    print("\nSaved training dataset to train_dataset.csv")
-
     return train_dataset
 
 
@@ -425,10 +420,6 @@ def get_full_eval_dataset():
 
     # Shuffle the dataset
     eval_dataset = eval_dataset.shuffle(seed=42)
-    
-    # Save dataset to CSV file
-    eval_dataset.to_csv('eval_dataset.csv', index=False)
-    print("\nSaved evaluation dataset to eval_dataset.csv")
     
     return eval_dataset
     
