@@ -19,7 +19,7 @@ Assistant: Let's think step by step:
 </answer>
 
 User: {scenario}
-Assistant: Let's think step by step:"""
+Assistant: <think> Let's think step by step:"""
 )
 
 def load_moca_dataset():
@@ -66,6 +66,7 @@ def reward_fn(completions, **kwargs):
         else:
             rewards.append(0)
             continue
+        completion = "<think>" + completion
         reasoning = extract_text(completion, 'think')
         if reasoning is None:
             # relax the condition
@@ -91,7 +92,7 @@ def make_conversation_moral_stories(example):
     else:
         options = [example["immoral_action"], example["moral_action"]]
 
-    scenario = f"""{example["situation"]}. {example["intention"]}.
+    scenario = f"""{example["situation"]} {example["intention"]}
 Between the following two actions A and B, which one should be chosen?
 A. {options[0]}
 B. {options[1]}"""
@@ -126,7 +127,7 @@ def make_conversation_scruples(example):
     
     action_description = example["action"]["description"]
 
-    scenario = f"""Scenario: {example['text']}.
+    scenario = f"""Scenario: {example['text']}
 Action: {action_description}
 Between the following two judgments A and B, which one reflects the author's action?
 A. {options[0]}
@@ -157,7 +158,7 @@ def make_conversation_ethics_commonsense(example):
     else:
         options = [not_ground_truth, ground_truth]
     
-    scenario = f"""Scenario: {example['input']}.
+    scenario = f"""Scenario: {example['input']}
 Between the following two judgments A and B, which one reflects this action?
 A. {options[0]}
 B. {options[1]}"""
@@ -187,7 +188,7 @@ def make_conversation_ethics_deontology(example):
     else:
         options = [not_ground_truth, ground_truth]
 
-    scenario = f"""Scenario: {example['scenario']}.
+    scenario = f"""Scenario: {example['scenario']}
 Excuse: {example['excuse']}
 Is this excuse appropriate? Select A or B.
 A. {options[0]}
