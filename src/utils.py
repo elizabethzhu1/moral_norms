@@ -72,9 +72,6 @@ def reward_fn(completions, **kwargs):
             # anything before <answer> is the reasoning
             reasoning = completion.split("</answer>")[0]
         answer = extract_text(completion, 'answer')
-        print(f"completion: {completion}")
-        print()
-        print(f"reasoning: {reasoning}, answer: {answer}, gt: {gt}")
         if reasoning is not None and answer is not None:
             reward = 0.1
             if check_answer(answer, gt):
