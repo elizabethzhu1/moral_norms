@@ -72,6 +72,8 @@ training_args = GRPOConfig(
     vllm_server_port=8001,
     vllm_gpu_memory_utilization=0.95,
     vllm_enable_prefix_caching=True,
+    log_completions=True,
+    num_completions_to_print=10,
     )
 
 trainer = GRPOTrainer(
