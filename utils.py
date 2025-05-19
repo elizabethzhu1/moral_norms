@@ -9,18 +9,15 @@ PROMPT = (
     """Reason about the following moral scenario provided by the User. For each scenario, you must provide ALL of the following in order:
 
 1) Your step-by-step reasoning between <think> and </think> tags
-3) Your final answer (ONLY the option letter) between <answer> and </answer> tags
+2) Your final answer (ONLY the option letter) between <answer> and </answer> tags
 
 Your response MUST follow the following format:
 Assistant: Let's think step by step:
 <think>
 [Your detailed reasoning here]
 </think>
-<norm>
-[The relevant moral norm]
-</norm>
 <answer>
-A/B/C/D/E
+A/B/C
 </answer>
 
 User: {scenario}
