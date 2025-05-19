@@ -67,6 +67,10 @@ def reward_fn(completions, **kwargs):
             rewards.append(0)
             continue
         reasoning = extract_text(completion, 'think')
+        if reasoning is None:
+            # relax the condition
+            # anything before <answer> is the reasoning
+            reasoning = completion.split("</answer>")[0]
         answer = extract_text(completion, 'answer')
         print(f"completion: {completion}")
         print()
