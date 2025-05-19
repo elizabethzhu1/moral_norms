@@ -58,7 +58,9 @@ def extract_text(text, tag):
 # check if answer is correct --> if so, return 1, else return 0
 def reward_fn(completions, **kwargs):
     rewards = []
-    print(f"completions: {completions}")
+    print(f"completions: {type(completions)}")
+    print(f"completions: {len(completions)}")
+    print(f"completions: {completions[1]}")
     completion_contents = [completion[0]["content"] for completion in completions]
 
     for completion, gt in zip(completion_contents, kwargs['ground_truth']):
