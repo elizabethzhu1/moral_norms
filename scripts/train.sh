@@ -1,1 +1,1 @@
-accelerate launch --config_file configs/accelerate.yml src/train.py --config configs/config.json
+CUDA_VISIBLE_DEVICES=1,2 accelerate launch --config_file configs/accelerate.yml src/train.py --config configs/config.json
