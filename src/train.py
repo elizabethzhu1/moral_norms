@@ -408,7 +408,7 @@ training_args = GRPOConfig(
     num_completions_to_print=10,
     )
 
-trainer = CustomGRPOTrainer(
+trainer = GRPOTrainer(
     model=model,
     reward_funcs=reward_fn,
     args=training_args,
