@@ -406,6 +406,9 @@ training_args = GRPOConfig(
     vllm_enable_prefix_caching=True,
     log_completions=True,
     num_completions_to_print=10,
+    sync_ref_model=True,
+    ref_model_sync_steps=100,
+    ref_model_mixup_alpha=0.6
     )
 
 trainer = GRPOTrainer(
