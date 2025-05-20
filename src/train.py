@@ -56,16 +56,9 @@ from trl.extras.profiling import profiling_context, profiling_decorator
 from trl.extras.vllm_client import VLLMClient
 from trl.import_utils import is_liger_kernel_available, is_vllm_available
 from trl.models import create_reference_model, prepare_deepspeed, prepare_fsdp, unwrap_model_for_generation
-from trl.models.utils import _ForwardRedirection
-from trl.trainer.callbacks import SyncRefModelCallback
 from trl.trainer.grpo_config import GRPOConfig
 from trl.trainer.utils import (
-    disable_dropout_in_model,
-    generate_model_card,
-    get_comet_experiment_url,
     pad,
-    print_prompt_completions_sample,
-    selective_log_softmax,
 )
 
 
