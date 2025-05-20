@@ -10,8 +10,7 @@ SYSTEM_PROMPT = (
 2) Your final answer (ONLY the option letter) between <answer> and </answer> tags
 
 Your response MUST follow the following format:
-Assistant: Let's think step by step:
-<think>
+Assistant: <think>Let's think step by step:
 [Your detailed reasoning here]
 </think>
 <answer>
