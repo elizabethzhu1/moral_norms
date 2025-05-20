@@ -412,7 +412,7 @@ training_args = GRPOConfig(
     ref_model_mixup_alpha=0.6
     )
 
-trainer = CustomGRPOTrainer(
+trainer = GRPOTrainer(
     model=model,
     reward_funcs=reward_fn,
     args=training_args,
