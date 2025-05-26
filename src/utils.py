@@ -374,15 +374,15 @@ def get_full_training_dataset():
 
 def get_full_eval_dataset():
     # Load all test datasets from HuggingFace
-    ds_eval_moral_stories = load_dataset("demelin/moral_stories", "gen-norm$actions+context+consequences-norm_distance", split='test')
-    ds_eval_scruples = load_dataset("metaeval/scruples", split='test')
-    ds_eval_ethics_commensense = load_dataset("hendrycks/ethics", "commonsense", split='test')
-    ds_eval_ethics_deontology = load_dataset("hendrycks/ethics", "deontology", split='test')
-    ds_eval_ethics_justice = load_dataset("hendrycks/ethics", "justice", split='test')
-    ds_eval_ethics_utilitarianism = load_dataset("hendrycks/ethics", "utilitarianism", split='test')
+    ds_eval_moral_stories = load_dataset("demelin/moral_stories", "gen-norm$actions+context+consequences-norm_distance", split='test', cache_dir=None)
+    ds_eval_scruples = load_dataset("metaeval/scruples", split='test', cache_dir=None)
+    ds_eval_ethics_commensense = load_dataset("hendrycks/ethics", "commonsense", split='test', cache_dir=None)
+    ds_eval_ethics_deontology = load_dataset("hendrycks/ethics", "deontology", split='test', cache_dir=None)
+    ds_eval_ethics_justice = load_dataset("hendrycks/ethics", "justice", split='test', cache_dir=None)
+    ds_eval_ethics_utilitarianism = load_dataset("hendrycks/ethics", "utilitarianism", split='test', cache_dir=None)
 
     # Load MOCA dataset from local JSON file
-    ds_eval_moca = load_dataset("json", data_files="moca_dataset.json", split="train")
+    ds_eval_moca = load_dataset("json", data_files="moca_dataset.json", split="train", cache_dir=None)
 
     # Process each dataset and add dataset name
     eval_dataset_moral_stories = get_eval_dataset(ds_eval_moral_stories, "moral_stories").map(lambda x: {"dataset_name": "moral_stories", **x})

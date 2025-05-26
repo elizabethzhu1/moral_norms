@@ -13,20 +13,14 @@ def extract_xml_tags(completion):
     answer_match = re.search(r'<\s*[Aa][Nn][Ss][Ww][Ee][Rr]\s*>(.*?)</\s*[Aa][Nn][Ss][Ww][Ee][Rr]\s*>', completion, re.DOTALL)
     answer = answer_match.group(1).strip().upper() if answer_match else None
     
-    # Extract norm - allow for spaces and capitalization
-    norm_match = re.search(r'<\s*[Nn][Oo][Rr][Mm]\s*>(.*?)</\s*[Nn][Oo][Rr][Mm]\s*>', completion, re.DOTALL)
-    norm = norm_match.group(1).strip() if norm_match else None
-    
     # Extract reasoning - allow for spaces and capitalization
     reasoning_match = re.search(r'<\s*[Tt][Hh][Ii][Nn][Kk]\s*>(.*?)</\s*[Tt][Hh][Ii][Nn][Kk]\s*>', completion, re.DOTALL)
     reasoning = reasoning_match.group(1).strip() if reasoning_match else None
     
     return {
         'answer': answer,
-        'norm': norm,
         'reasoning': reasoning,
         'valid_answer': bool(answer),
-        'valid_norm': bool(norm)
     }
 
 
