@@ -59,7 +59,7 @@ def main():
     # save
     os.makedirs(args.save_dir, exist_ok=True)
     with open(os.path.join(args.save_dir, 'model_responses.json'), 'w') as f:
-        json.dump(result, f)
+        json.dump(result, f, indent=4)
 
 
 if __name__ == "__main__":
