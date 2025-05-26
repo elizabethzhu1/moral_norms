@@ -10,8 +10,7 @@ SYSTEM_PROMPT = (
 2) Your final answer (ONLY the option letter) between <answer> and </answer> tags
 
 Your response MUST follow the following format:
-Assistant: Let's think step by step:
-<think>
+Assistant: <think>Let's think step by step:
 [Your detailed reasoning here]
 </think>
 <answer>
@@ -19,7 +18,7 @@ Assistant: Let's think step by step:
 </answer>
 
 User: {scenario}
-Assistant: Let's think step by step:"""
+Assistant: <think> Let's think step by step:"""
 )
 
 def load_moca_dataset():
@@ -58,20 +57,21 @@ def extract_text(text, tag):
 # check if answer is correct --> if so, return 1, else return 0
 def reward_fn(completions, **kwargs):
     rewards = []
-    completion_contents = [completion[0]["content"] for completion in completions]
 
-    for completion, gt in zip(completion_contents, kwargs['ground_truth']):
+    for completion, gt in zip(completions, kwargs['ground_truth']):
         reward = 0
         if "</answer>" in completion:
             completion = completion.split("</answer>")[0] + "</answer>"
         else:
             rewards.append(0)
             continue
+        completion = "<think>" + completion
         reasoning = extract_text(completion, 'think')
+        if reasoning is None:
+            # relax the condition
+            # anything before <answer> is the reasoning
+            reasoning = completion.split("</answer>")[0]
         answer = extract_text(completion, 'answer')
-        print(f"completion: {completion}")
-        print()
-        print(f"reasoning: {reasoning}, answer: {answer}, gt: {gt}")
         if reasoning is not None and answer is not None:
             reward = 0.1
             if check_answer(answer, gt):
@@ -91,7 +91,7 @@ def make_conversation_moral_stories(example):
     else:
         options = [example["immoral_action"], example["moral_action"]]
 
-    scenario = f"""{example["situation"]}. {example["intention"]}.
+    scenario = f"""{example["situation"]} {example["intention"]}
 Between the following two actions A and B, which one should be chosen?
 A. {options[0]}
 B. {options[1]}"""
@@ -126,7 +126,7 @@ def make_conversation_scruples(example):
     
     action_description = example["action"]["description"]
 
-    scenario = f"""Scenario: {example['text']}.
+    scenario = f"""Scenario: {example['text']}
 Action: {action_description}
 Between the following two judgments A and B, which one reflects the author's action?
 A. {options[0]}
@@ -157,7 +157,7 @@ def make_conversation_ethics_commonsense(example):
     else:
         options = [not_ground_truth, ground_truth]
     
-    scenario = f"""Scenario: {example['input']}.
+    scenario = f"""Scenario: {example['input']}
 Between the following two judgments A and B, which one reflects this action?
 A. {options[0]}
 B. {options[1]}"""
@@ -187,7 +187,7 @@ def make_conversation_ethics_deontology(example):
     else:
         options = [not_ground_truth, ground_truth]
 
-    scenario = f"""Scenario: {example['scenario']}.
+    scenario = f"""Scenario: {example['scenario']}
 Excuse: {example['excuse']}
 Is this excuse appropriate? Select A or B.
 A. {options[0]}
