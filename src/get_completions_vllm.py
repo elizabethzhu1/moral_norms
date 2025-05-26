@@ -27,7 +27,7 @@ def main():
         max_num_batched_tokens=2048,
         enable_chunked_prefill=True,
         trust_remote_code=True,
-        gpu_memory_utilization=0.9,
+        gpu_memory_utilization=0.95,
     )
 
     # Configure sampling parameters
