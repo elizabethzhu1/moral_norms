@@ -12,7 +12,7 @@ def main():
     parser.add_argument('--output', type=str, default='model_responses.csv', help='Output file path')
     parser.add_argument('--batch_size', type=int, default=32, help='Batch size for generation')
     parser.add_argument('--max_tokens', type=int, default=512, help='Maximum number of tokens to generate')
-    parser.add_argument('--temperature', type=float, default=0.7, help='Sampling temperature')
+    parser.add_argument('--temperature', type=float, default=0.0, help='Sampling temperature')
     parser.add_argument('--top_p', type=float, default=0.95, help='Top-p sampling parameter')
     args = parser.parse_args()
 
