@@ -21,6 +21,93 @@ User: {scenario}
 Assistant: <think> Let's think step by step:"""
 )
 
+def extract_answer(response):
+    # Extract answer from response
+    answer_match = re.search(r'<\s*answer\s*>(.*?)</\s*answer\s*>', response, re.DOTALL)
+    answer = answer_match.group(1).strip().upper() if answer_match else None
+    return answer
+
+
+def extract_norm(response):
+    # Extract norm from response
+    norm_match = re.search(r'<\s*norm\s*>(.*?)</\s*norm\s*>', response, re.DOTALL)
+    norm = norm_match.group(1).strip() if norm_match else None
+    return norm
+
+
+def extract_counterfactual(response):
+    # Extract counterfactual from response
+    counterfactual_match = re.search(r'<\s*counterfactual\s*>(.*?)</\s*counterfactual\s*>', response, re.DOTALL)
+    counterfactual = counterfactual_match.group(1).strip() if counterfactual_match else None
+    return counterfactual
+
+
+def extract_development(response):
+    # Extract development from response
+    development_match = re.search(r'<\s*development\s*>(.*?)</\s*development\s*>', response, re.DOTALL)
+    development = development_match.group(1).strip() if development_match else None
+    return development
+
+
+def extract_motivation(response):
+    # Extract motivation from response
+    motivation_match = re.search(r'<\s*motivation\s*>(.*?)</\s*motivation\s*>', response, re.DOTALL)
+    motivation = motivation_match.group(1).strip() if motivation_match else None
+    return motivation
+
+
+def extract_values(response):
+    # Extract values from response
+    care_match = re.search(r'<\s*care\s*>(.*?)</\s*care\s*>', response, re.DOTALL)
+    care = care_match.group(1).strip() if care_match else None
+    
+    fairness_match = re.search(r'<\s*fairness\s*>(.*?)</\s*fairness\s*>', response, re.DOTALL)
+    fairness = fairness_match.group(1).strip() if fairness_match else None
+    
+    loyalty_match = re.search(r'<\s*loyalty\s*>(.*?)</\s*loyalty\s*>', response, re.DOTALL)
+    loyalty = loyalty_match.group(1).strip() if loyalty_match else None
+
+    authority_match = re.search(r'<\s*authority\s*>(.*?)</\s*authority\s*>', response, re.DOTALL)
+    authority = authority_match.group(1).strip() if authority_match else None
+
+    purity_match = re.search(r'<\s*purity\s*>(.*?)</\s*purity\s*>', response, re.DOTALL)
+    purity = purity_match.group(1).strip() if purity_match else None
+    
+    return {
+        'care': care,
+        'fairness': fairness,
+        'loyalty': loyalty,
+        'authority': authority,
+        'purity': purity
+    }
+
+
+def extract_moral_framework(response):
+    # Extract moral framework from response
+    utilitarianism_match = re.search(r'<\s*utilitarianism\s*>(.*?)</\s*utilitarianism\s*>', response, re.DOTALL)
+    utilitarianism = utilitarianism_match.group(1).strip() if utilitarianism_match else None
+
+    deontology_match = re.search(r'<\s*deontology\s*>(.*?)</\s*deontology\s*>', response, re.DOTALL)
+    deontology = deontology_match.group(1).strip() if deontology_match else None
+
+    justice_match = re.search(r'<\s*justice\s*>(.*?)</\s*justice\s*>', response, re.DOTALL)
+    justice = justice_match.group(1).strip() if justice_match else None
+    
+    virtue_ethics_match = re.search(r'<\s*virtue\s*>(.*?)</\s*virtue\s*>', response, re.DOTALL)
+    virtue_ethics = virtue_ethics_match.group(1).strip() if virtue_ethics_match else None
+
+    care_ethics_match = re.search(r'<\s*care\s*>(.*?)</\s*care\s*>', response, re.DOTALL)
+    care_ethics = care_ethics_match.group(1).strip() if care_ethics_match else None
+
+    return {
+        'utilitarianism': utilitarianism,
+        'deontology': deontology,
+        'justice': justice,
+        'virtue_ethics': virtue_ethics,
+        'care_ethics': care_ethics
+    }
+
+
 def load_moca_dataset():
     # load JSON file
     with open('moca_dataset.json', 'r') as f:

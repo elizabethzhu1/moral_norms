@@ -40,6 +40,9 @@ def main():
     # Load evaluation dataset
     eval_dataset = get_full_eval_dataset()
     
+    # Take a random subset of 1000 examples
+    eval_dataset = eval_dataset.shuffle(seed=42).select(range(1000))
+    
     # Prepare data for generation
     prompts = eval_dataset['prompt']
     ground_truths = eval_dataset['ground_truth']
