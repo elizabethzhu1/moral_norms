@@ -58,10 +58,6 @@ class BaseAnalyzer:
                 
                 for full_prompt, prompt_type in zip(full_prompts, prompt_types):
                     # Include the step number in the custom_id.
-
-                    print(f"Full prompt: {full_prompt}")
-                    print(f"Prompt type: {prompt_type}")
-
                     custom_id = f"prob-{global_idx}-{step_val}-{prompt_type}"
                     batch_request = {
                         "custom_id": custom_id,
@@ -70,7 +66,7 @@ class BaseAnalyzer:
                         "body": {
                             "model": "gpt-4o-mini",
                             "messages": [
-                                {"role": "system", "content": "You are a helpful assistant that evaluates moral reasoning. You will be given a scenario and a reasoning chain, and you will need to evaluate the reasoning chain according to the evaluation task."},
+                                {"role": "system", "content": "You are a helpful assistant that evaluates moral reasoning. You will be given a scenario and a reasoning chain and you must evaluate the reasoning chain according to the evaluation task."},
                                 {"role": "user", "content": full_prompt}
                             ],
                             "max_tokens": 512,
